@@ -7,7 +7,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Candace - 绘图小女仆~",
+  title: "Candace - 画仆",
   description: "用来编辑图片的工具",
 };
 
