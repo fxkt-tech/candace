@@ -1,5 +1,6 @@
 "use client";
 
+import { tagsAdd, tagsDrop, tagSplit } from "@/util/tag";
 import {
   AddOutlined as AddIcon,
   DeleteOutlined as DeleteIcon,
@@ -31,11 +32,15 @@ export default function Home() {
   const [currentName, setCurrentName] = useState("");
   const [currentImg, setCurrentImg] = useState("");
   const [currentTags, setCurrentTags] = useState<string[]>([]);
+  // 标签管理器的输入
+  const [tagsMgr_Input, setTagsMgr_Input] = useState("");
 
-  const handleClick = () => {};
-
-  const handleDelete = () => {
-    console.info("You clicked the delete icon.");
+  const handleClick = (tag: string) => {
+    console.log(tag, currentTags);
+    if (currentTags.includes(tag)) {
+      let tags = tagsDrop(currentTags, [tag]);
+      setCurrentTags(tags);
+    }
   };
 
   const handleImgClick = (limg: LocalImage) => {
@@ -49,6 +54,17 @@ export default function Home() {
     setCurrentName("");
     setCurrentImg("");
     setCurrentTags([]);
+  };
+
+  const handleAddTags = () => {
+    imgs.forEach((value, _) => {
+      if (value.name === currentName) {
+        let tags = tagsAdd(value.tags, tagSplit(tagsMgr_Input));
+        value.tags = tags;
+        setCurrentTags(tags);
+      }
+    });
+    setTagsMgr_Input("");
   };
 
   const onOpenDir = async () => {
@@ -141,7 +157,7 @@ export default function Home() {
                   <CardMedia component="img" image={item.src} alt={item.name} />
                   <CardContent>
                     <Typography variant="body2" color="text">
-                      {item.tags}
+                      {item.tags.join(", ")}
                     </Typography>
                   </CardContent>
                 </CardActionArea>
@@ -150,6 +166,7 @@ export default function Home() {
           ))}
         </ImageList>
       </Grid>
+
       <Grid xs={6}>
         <Paper sx={{ margin: "10px", padding: "5px" }} elevation={0}>
           <Button onClick={onOpenDir}>从本地加载图像</Button>
@@ -157,6 +174,8 @@ export default function Home() {
           <Button onClick={handleImgsClear} disabled={imgs.length === 0}>
             清空左侧列表
           </Button>
+        </Paper>
+        <Paper sx={{ margin: "10px", padding: "5px" }} elevation={0}>
           <Paper
             component="form"
             variant="outlined"
@@ -168,13 +187,17 @@ export default function Home() {
             }}
           >
             <InputBase
+              value={tagsMgr_Input}
               sx={{ ml: 1, flex: 1 }}
               placeholder={"输入或选择要操作的标签。" + currentName}
+              onChange={(event: any) => {
+                setTagsMgr_Input(event.target.value);
+              }}
             />
 
             <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
 
-            <IconButton color="primary">
+            <IconButton color="primary" onClick={handleAddTags}>
               <AddIcon />
             </IconButton>
             <IconButton color="error">
@@ -189,10 +212,12 @@ export default function Home() {
               <Chip
                 key={tag}
                 label={tag}
+                sx={{ marginLeft: "5px", marginBottom: "5px" }}
                 size="small"
                 variant="outlined"
-                onClick={handleClick}
-                onDelete={handleDelete}
+                onClick={() => {
+                  handleClick(tag);
+                }}
               />
             ))}
           </Box>
