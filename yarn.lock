@@ -358,6 +358,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@microsoft/fetch-event-source@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "@microsoft/fetch-event-source@npm:2.0.1"
+  checksum: a50e1c0f33220206967266d0a4bbba0703e2793b079d9f6e6bfd48f71b2115964a803e14cf6e902c6fab321edc084f26022334f5eaacc2cec87f174715d41852
+  languageName: node
+  linkType: hard
+
 "@mui/base@npm:5.0.0-beta.8":
   version: 5.0.0-beta.8
   resolution: "@mui/base@npm:5.0.0-beta.8"
@@ -1274,6 +1281,7 @@ __metadata:
   dependencies:
     "@emotion/react": ^11.11.1
     "@emotion/styled": ^11.11.0
+    "@microsoft/fetch-event-source": ^2.0.1
     "@mui/icons-material": ^5.14.1
     "@mui/material": ^5.14.1
     "@types/node": 20.4.2
@@ -1282,10 +1290,12 @@ __metadata:
     autoprefixer: 10.4.14
     eslint: 8.45.0
     eslint-config-next: 13.4.11
+    nanoid: ^5.0.1
     next: 13.4.11
     postcss: 8.4.27
     react: 18.2.0
     react-dom: 18.2.0
+    react-usestateref: ^1.0.8
     tailwindcss: 3.3.3
     typescript: 5.1.6
   languageName: unknown
@@ -3326,6 +3336,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nanoid@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "nanoid@npm:5.0.1"
+  bin:
+    nanoid: bin/nanoid.js
+  checksum: fb5a57ec0563f12f101129b2f11fe50505e5f1219760c43e6ae30fc0a0d2aa269985f6d07ddea15e3bd4b24751c9ef14fa8117cbc80d410726429e2b37a4b13f
+  languageName: node
+  linkType: hard
+
 "natural-compare@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
@@ -3918,6 +3937,15 @@ __metadata:
     react: ">=16.6.0"
     react-dom: ">=16.6.0"
   checksum: 75602840106aa9c6545149d6d7ae1502fb7b7abadcce70a6954c4b64a438ff1cd16fc77a0a1e5197cdd72da398f39eb929ea06f9005c45b132ed34e056ebdeb1
+  languageName: node
+  linkType: hard
+
+"react-usestateref@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "react-usestateref@npm:1.0.8"
+  peerDependencies:
+    react: ">16.0.0"
+  checksum: bfe328b55bbfaa9f77c62be23fa051d051f4827ff2fbbbcc656ee69d2c16f789b800113dc775f114fe31264325c33f04f5e5ef7679debc78721785fbcd90af4a
   languageName: node
   linkType: hard
 
