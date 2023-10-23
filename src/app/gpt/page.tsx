@@ -9,20 +9,46 @@ import {
   SendOutlined as SendOutlinedIcon,
 } from "@mui/icons-material";
 import {
+  Box,
   Button,
-  Divider,
   Unstable_Grid2 as Grid,
   IconButton,
   InputBase,
   Paper,
 } from "@mui/material";
 import { nanoid } from "nanoid";
-import { useEffect, useState } from "react";
-import { Completion } from "./model";
+import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { coldarkCold as mdStyle } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Completion, Platform } from "./model";
+import useAutoScroll from "@/hooks/useAutoScroll";
 
-const initCompletions = () => {
-  return [{ id: nanoid(), role: "user", content: "" }];
+const initCompletions = (): Completion[] => {
+  return [
+    {
+      id: nanoid(),
+      role_name: roleName["user"],
+      role: "user",
+      content: "",
+      autoFocus: true,
+      mouseOver: false,
+    },
+  ];
 };
+
+const roleName = {
+  user: "我",
+  assistant: "文仆",
+};
+
+const platforms: Platform[] = [
+  { name: "GPT3.5", value: "azure" },
+  { name: "文心", value: "wenxin" },
+];
 
 export default function GPT() {
   // 对话列表
@@ -30,6 +56,18 @@ export default function GPT() {
     initCompletions()
   );
   const [gptAnswerLoading, setGPTAnswerLoading] = useState(false);
+  const [platformIdx, setPlatformIdx] = useState(0);
+  const previewDomRef = useRef<any>();
+  const [startScroll, stopScroll] = useAutoScroll(previewDomRef);
+
+  useEffect(() => {
+    if (gptAnswerLoading) {
+      startScroll();
+    }
+    return () => {
+      stopScroll();
+    };
+  }, [gptAnswerLoading]);
 
   const newCompletions = () => {
     setCompletions(initCompletions());
@@ -43,7 +81,21 @@ export default function GPT() {
     const role = reverseRole(lastRole);
 
     const uniqueId = nanoid();
-    setCompletions([...completions, { id: uniqueId, role: role, content: "" }]);
+    const newcomps = completions.map((c) => {
+      c.autoFocus = false;
+      return c;
+    });
+    setCompletions([
+      ...newcomps,
+      {
+        id: uniqueId,
+        role_name: roleName[role],
+        role: role,
+        content: "",
+        autoFocus: true,
+        mouseOver: false,
+      },
+    ]);
 
     return uniqueId;
   };
@@ -67,13 +119,6 @@ export default function GPT() {
   };
 
   const changeContent = (id: string, content: string) => {
-    // const nextComps = completions.map((comp) => {
-    //   if (comp.id === id) {
-    //     comp.content = content;
-    //   }
-    //   return comp;
-    // });
-    // setCompletions(nextComps);
     setCompletions((completions) => {
       return completions.map((comp) => {
         if (comp.id === id) {
@@ -84,6 +129,20 @@ export default function GPT() {
     });
   };
 
+  const mouseStatus = (id: string, status: boolean) => {
+    const nextComps = completions.map((comp) => {
+      if (comp.id === id) {
+        comp.mouseOver = status;
+      }
+      return comp;
+    });
+    setCompletions(nextComps);
+  };
+
+  const switchPlatform = () => {
+    setPlatformIdx((platformIdx + 1) % platforms.length);
+  };
+
   const gptAnwser = () => {
     setGPTAnswerLoading(true);
     const messages = completions.map((comp) => {
@@ -91,42 +150,59 @@ export default function GPT() {
     });
     const id = addMessage();
     let respString = "";
-    fetchEventSource("http://localhost:8000/v1/chat/completions", {
+    fetchEventSource("", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        imark: "",
+        apifmt: "standard",
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: messages,
+        platform: platforms[platformIdx].value,
       }),
       mode: "cors",
       onmessage(event) {
-        // 表示整体结束
-        if (event.data === "[DONE]") {
-          setGPTAnswerLoading(false);
-          return;
+        try {
+          // 表示整体结束
+          if (event.data === "[DONE]") {
+            setGPTAnswerLoading(false);
+            return;
+          }
+          const jsonData = JSON.parse(event.data);
+          if (jsonData.content !== undefined) {
+            respString += jsonData.content;
+            changeContent(id, respString);
+          }
+        } catch (error) {
+          console.log(error);
         }
-        const jsonData = JSON.parse(event.data);
-        if (jsonData.content !== undefined) {
-          respString += jsonData.content;
-          changeContent(id, respString);
-        }
+      },
+      onerror(err) {
+        console.log(err);
       },
     });
   };
 
   const handleKeydown = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.code === "Enter") {
+    // let isMac = navigator.userAgentData.platform === "macOS";
+    let ctrled = e.ctrlKey || e.metaKey;
+    if (ctrled && e.code === "Enter") {
       gptAnwser();
+    } else if (ctrled && e.code === "KeyJ") {
+      addMessage();
+    } else if (ctrled && e.code === "KeyH") {
+      newCompletions();
     }
   };
+
   useEffect(() => {
     document.body.addEventListener("keydown", handleKeydown);
     return () => {
       document.body.removeEventListener("keydown", handleKeydown);
     };
-  }, []);
+  }, [completions]);
 
   return (
     <Grid
@@ -136,74 +212,116 @@ export default function GPT() {
         flexGrow: 1,
         display: "flex",
         justifyContent: "center",
-        backgroundColor: "#f4f5f7",
+        // backgroundColor: "#f4f5f7",
+        background: "linear-gradient(to right, #1034A640, #FFbF0040)",
       }}
     >
-      <Grid xs={8}>
-        <Paper sx={{ margin: "10px", padding: "5px" }} elevation={0}>
-          <Button onClick={newCompletions} disabled={completions.length === 0}>
-            <ClearOutlinedIcon />
-          </Button>
-          <Button onClick={addMessage}>
-            <AddIcon />
-          </Button>
-          <Button onClick={gptAnwser} disabled={gptAnswerLoading}>
-            {gptAnswerLoading ? (
-              <ScheduleSendOutlinedIcon />
-            ) : (
-              <SendOutlinedIcon />
-            )}
-          </Button>
-        </Paper>
-
+      <Grid xs={11} lg={8}>
         <Paper
-          sx={{ margin: "10px", padding: "5px", height: "90vh" }}
+          ref={previewDomRef}
+          sx={{
+            margin: "10px",
+            padding: "5px",
+            height: "90vh",
+            // overflowY: "scroll",
+            position: "sticky",
+            bottom: 0,
+            overflow: "auto",
+          }}
           elevation={0}
         >
           {completions.map((item: Completion) => (
             <Paper
               component="form"
-              variant="outlined"
+              variant={item.role === "user" ? "elevation" : "outlined"}
+              elevation={0}
               sx={{
                 p: "2px 4px",
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-start",
+                // backgroundColor: item.role === "user" ? "red" : "#01f74388",
                 margin: "5px",
               }}
               key={item.id}
+              onMouseOver={() => {
+                mouseStatus(item.id, true);
+              }}
+              onMouseLeave={() => {
+                mouseStatus(item.id, false);
+              }}
             >
               <Button
                 onClick={() => {
                   changeRole(item.id);
                 }}
               >
-                {item.role}
+                {item.role_name}
               </Button>
 
-              <InputBase
-                value={item.content}
-                multiline
-                minRows={1}
-                maxRows={20}
-                sx={{ ml: 1, flex: 1 }}
-                // placeholder={"输入或选择要操作的标签。" + currentName}
-                onChange={(event: any) => {
-                  changeContent(item.id, event.target.value);
-                }}
-              />
+              {item.role === "user" ? (
+                <InputBase
+                  autoComplete="off"
+                  value={item.content}
+                  multiline
+                  minRows={1}
+                  // maxRows={20}
+                  autoFocus={item.autoFocus}
+                  sx={{
+                    ml: 1,
+                    color: item.role === "user" ? "#000044" : "#000044",
+                    flex: 1,
+                  }}
+                  // placeholder={"输入或选择要操作的标签。" + currentName}
+                  onChange={(event: any) => {
+                    changeContent(item.id, event.target.value);
+                  }}
+                />
+              ) : (
+                <Box sx={{ width: "100%", padding: "5px" }}>
+                  <Markdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
+                    components={{
+                      text(props) {
+                        const { children, className, node, ...rest } = props;
+                        return (
+                          <text {...rest} className={className}>
+                            {children}
+                          </text>
+                        );
+                      },
+                      code(props) {
+                        const { children, className, node, ...rest } = props;
+                        const match = /language-(\w+)/.exec(className || "");
+                        console.log("props", props);
+                        return match ? (
+                          <SyntaxHighlighter
+                            // {...rest}
+                            language={match[1]}
+                            customStyle={{ borderRadius: "5px" }}
+                            style={mdStyle}
+                            wrapLines={true}
+                            PreTag="div"
+                          >
+                            {String(children).replace(/\n$/, "")}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code {...rest} className={className}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {item.content}
+                  </Markdown>
+                </Box>
+              )}
 
-              <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
-
-              {/* <IconButton
-                color="primary"
-                onClick={() => {
-                  delMessage(item.id);
-                }}
-              >
-                <AddIcon />
-              </IconButton> */}
               <IconButton
                 color="error"
+                size="small"
+                // hidden={!item.mouseOver}
                 onClick={() => {
                   delMessage(item.id);
                 }}
@@ -212,6 +330,25 @@ export default function GPT() {
               </IconButton>
             </Paper>
           ))}
+        </Paper>
+
+        <Paper sx={{ margin: "10px", padding: "5px" }} elevation={0}>
+          <Button onClick={gptAnwser} disabled={gptAnswerLoading}>
+            {gptAnswerLoading ? (
+              <ScheduleSendOutlinedIcon />
+            ) : (
+              <SendOutlinedIcon />
+            )}
+          </Button>
+          <Button onClick={addMessage}>
+            <AddIcon />
+          </Button>
+          <Button color="error" onClick={newCompletions}>
+            <ClearOutlinedIcon />
+          </Button>
+          <Button color="secondary" onClick={switchPlatform}>
+            {platforms[platformIdx].name}
+          </Button>
         </Paper>
       </Grid>
     </Grid>
